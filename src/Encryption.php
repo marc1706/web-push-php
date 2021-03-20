@@ -402,7 +402,7 @@ class Encryption
     {
         $value = unpack('H*', Base64Url::decode($value));
 
-        return BigInteger::fromBase($value[1], 16);
+        return BigInteger::fromBase($value !== false ? $value[1] : '', 16);
     }
 
     /**
@@ -413,7 +413,7 @@ class Encryption
     {
         $value = unpack('H*', Base64Url::decode($value));
 
-        return gmp_init($value[1], 16);
+        return gmp_init($value !== false ? $value[1] : '', 16);
     }
 
     private static function addNullPadding(string $data): string
