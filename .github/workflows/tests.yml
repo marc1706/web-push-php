@@ -34,6 +34,9 @@ jobs:
       - name: Setup chromedriver
         uses: nanasess/setup-chromedriver@master
 
+      - name: Setup geckodriver
+        uses: browser-actions/setup-geckodriver@latest
+
       - run: |
           #export DISPLAY=:99
           #chromedriver --url-base=/wd/hub &
