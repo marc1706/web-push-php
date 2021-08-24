@@ -70,7 +70,6 @@ class WebPush
     {
         $extensions = [
             'curl' => '[WebPush] curl extension is not loaded but is required. You can fix this in your php.ini.',
-            'gmp' => '[WebPush] gmp extension is not loaded but is required for sending push notifications with payload or for VAPID authentication. You can fix this in your php.ini.',
             'mbstring' => '[WebPush] mbstring extension is not loaded but is required for sending push notifications with payload or for VAPID authentication. You can fix this in your php.ini.',
             'openssl' => '[WebPush] openssl extension is not loaded but is required for sending push notifications with payload or for VAPID authentication. You can fix this in your php.ini.',
         ];
