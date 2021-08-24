@@ -14,9 +14,7 @@ declare(strict_types=1);
 namespace Minishlink\WebPush;
 
 use Base64Url\Base64Url;
-use Brick\Math\BigInteger;
 use Jose\Component\Core\JWK;
-use Jose\Component\Core\Util\Ecc\NistCurve;
 use Jose\Component\Core\Util\Ecc\PrivateKey;
 use Jose\Component\Core\Util\ECKey;
 
@@ -259,50 +257,6 @@ class Encryption
      */
     private static function createLocalKeyObject(): array
     {
-        try {
-            return self::createLocalKeyObjectUsingOpenSSL();
-        } catch (\Exception $e) {
-            return self::createLocalKeyObjectUsingPurePhpMethod();
-        }
-    }
-
-    /**
-     * @return array
-     */
-    private static function createLocalKeyObjectUsingPurePhpMethod(): array
-    {
-        $curve = NistCurve::curve256();
-        $privateKey = $curve->createPrivateKey();
-        $publicKey = $curve->createPublicKey($privateKey);
-
-        if ($publicKey->getPoint()->getX() instanceof BigInteger) {
-            return [
-                new JWK([
-                    'kty' => 'EC',
-                    'crv' => 'P-256',
-                    'x' => Base64Url::encode(self::addNullPadding($publicKey->getPoint()->getX()->toBytes(false))),
-                    'y' => Base64Url::encode(self::addNullPadding($publicKey->getPoint()->getY()->toBytes(false))),
-                    'd' => Base64Url::encode(self::addNullPadding($privateKey->getSecret()->toBytes(false))),
-                ])
-            ];
-        }
-
-        return [
-            new JWK([
-                'kty' => 'EC',
-                'crv' => 'P-256',
-                'x' => Base64Url::encode(self::addNullPadding(hex2bin(gmp_strval($publicKey->getPoint()->getX(), 16)))),
-                'y' => Base64Url::encode(self::addNullPadding(hex2bin(gmp_strval($publicKey->getPoint()->getY(), 16)))),
-                'd' => Base64Url::encode(self::addNullPadding(hex2bin(gmp_strval($privateKey->getSecret(), 16)))),
-            ])
-        ];
-    }
-
-    /**
-     * @return array
-     */
-    private static function createLocalKeyObjectUsingOpenSSL(): array
-    {
         $keyResource = openssl_pkey_new([
             'curve_name'       => 'prime256v1',
             'private_key_type' => OPENSSL_KEYTYPE_EC,
@@ -323,9 +277,9 @@ class Encryption
             new JWK([
                 'kty' => 'EC',
                 'crv' => 'P-256',
-                'x' => Base64Url::encode(self::addNullPadding($details['ec']['x'])),
-                'y' => Base64Url::encode(self::addNullPadding($details['ec']['y'])),
-                'd' => Base64Url::encode(self::addNullPadding($details['ec']['d'])),
+                'x' => Base64Url::encode($details['ec']['x']),
+                'y' => Base64Url::encode($details['ec']['y']),
+                'd' => Base64Url::encode($details['ec']['d']),
             ])
         ];
     }
@@ -358,70 +312,17 @@ class Encryption
 
     private static function calculateAgreementKey(JWK $private_key, JWK $public_key): string
     {
-        if (function_exists('openssl_pkey_derive')) {
-            try {
-                $publicPem = openssl_pkey_get_public(ECKey::convertPublicKeyToPEM($public_key));
-                $privatePem = openssl_pkey_get_private(ECKey::convertPrivateKeyToPEM($private_key));
+        $publicPem = openssl_pkey_get_public(ECKey::convertPublicKeyToPEM($public_key));
+        $privatePem = openssl_pkey_get_private(ECKey::convertPrivateKeyToPEM($private_key));
 
-                if ($publicPem === false || $privatePem === false) {
-                    throw new \Exception('Unable to prepare public or private key for computing agreement key');
-                }
-
-                $result = openssl_pkey_derive($publicPem, $privatePem, 256); // @phpstan-ignore-line
-                if ($result === false) {
-                    throw new \Exception('Unable to compute the agreement key');
-                }
-                return $result;
-            } catch (\Throwable $throwable) {
-                //Does nothing. Will fallback to the pure PHP function
-            }
+        if ($publicPem === false || $privatePem === false) {
+            throw new \Exception('Unable to prepare public or private key for computing agreement key');
         }
 
-
-        $curve = NistCurve::curve256();
-        try {
-            $rec_x = self::convertBase64ToBigInteger($public_key->get('x'));
-            $rec_y = self::convertBase64ToBigInteger($public_key->get('y'));
-            $sen_d = self::convertBase64ToBigInteger($private_key->get('d'));
-            $priv_key = PrivateKey::create($sen_d);
-            $pub_key = $curve->getPublicKeyFrom($rec_x, $rec_y);
-
-            return hex2bin(str_pad($curve->mul($pub_key->getPoint(), $priv_key->getSecret())->getX()->toBase(16), 64, '0', STR_PAD_LEFT)); // @phpstan-ignore-line
-        } catch (\Throwable $e) {
-            $rec_x = self::convertBase64ToGMP($public_key->get('x'));
-            $rec_y = self::convertBase64ToGMP($public_key->get('y'));
-            $sen_d = self::convertBase64ToGMP($private_key->get('d'));
-            $priv_key = PrivateKey::create($sen_d); // @phpstan-ignore-line
-            $pub_key = $curve->getPublicKeyFrom($rec_x, $rec_y); // @phpstan-ignore-line
-
-            return hex2bin(gmp_strval($curve->mul($pub_key->getPoint(), $priv_key->getSecret())->getX(), 16)); // @phpstan-ignore-line
+        $result = openssl_pkey_derive($publicPem, $privatePem, 256); // @phpstan-ignore-line
+        if ($result === false) {
+            throw new \Exception('Unable to compute the agreement key');
         }
-    }
-
-    /**
-     * @param string $value
-     * @return BigInteger
-     */
-    private static function convertBase64ToBigInteger(string $value): BigInteger
-    {
-        $value = unpack('H*', Base64Url::decode($value));
-
-        return BigInteger::fromBase($value !== false ? $value[1] : '', 16);
-    }
-
-    /**
-     * @param string $value
-     * @return \GMP
-     */
-    private static function convertBase64ToGMP(string $value): \GMP
-    {
-        $value = unpack('H*', Base64Url::decode($value));
-
-        return gmp_init($value !== false ? $value[1] : '', 16);
-    }
-
-    private static function addNullPadding(string $data): string
-    {
-        return str_pad($data, 32, chr(0), STR_PAD_LEFT);
+        return $result;
     }
 }
