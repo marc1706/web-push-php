@@ -73,7 +73,7 @@ jobs:
 
       - name: Setup web-push-testing-service
         run: |
-          npm install web-push-testing-service -g
+          npm install @marc1706/web-push-testing-service -g
 
       - name: Run tests
         run: |
