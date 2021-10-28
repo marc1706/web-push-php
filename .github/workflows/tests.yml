@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        php: ['7.2', '7.3', '7.4', '8.0']
+        php: ['7.4']
 
     name: PHP ${{ matrix.php }}
 
@@ -30,16 +30,6 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: curl, mbstring, openssl, gmp
           coverage: none
-
-      - name: Setup chromedriver
-        uses: nanasess/setup-chromedriver@master
-
-      - name: Setup geckodriver
-        uses: browser-actions/setup-geckodriver@latest
-
-      - run: |
-          export DISPLAY=:99
-          sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 & # optional
 
       - name: Setup node
         uses: actions/setup-node@v2
@@ -75,10 +65,24 @@ jobs:
         run: |
           npm install @marc1706/web-push-testing-service -g
 
-      - name: Run tests
+      - name: Start web-push-testing-service
         run: |
-          web-push-testing-service start example -p 9012
-          composer test:unit
+          xvfb-run -a --server-args="-screen 0 1280x800x24 -ac -nolisten tcp -dpi 96 +extension RANDR" web-push-testing-service start example -p 9012
+
+      - name: Run composer tests
+        uses: GabrielBB/xvfb-action@v1
+        with:
+          run: composer test:unit
+
+      - name: Stop web-push-testing-service
+        run: |
           web-push-testing-service stop example
+
+      - name: Run typing & syntax tests
+        run: |
           composer test:typing
           composer test:syntax
+
+      - name: Setup upterm session
+        if: ${{ failure() }}
+        uses: lhotari/action-upterm@v1
