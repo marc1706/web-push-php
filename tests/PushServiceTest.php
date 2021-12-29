@@ -16,7 +16,7 @@ use Minishlink\WebPush\Subscription;
 
 final class PushServiceTest extends PHPUnit\Framework\TestCase
 {
-    private static $timeout = 30;
+    private static $timeout = 120;
     private static $portNumber = 9012;
     private static $testSuiteId;
     private static $testServiceUrl;
@@ -90,7 +90,7 @@ final class PushServiceTest extends PHPUnit\Framework\TestCase
      */
     public function testBrowsers($browserId, $browserVersion, $options)
     {
-        $this->retryTest(2, $this->createClosureTest($browserId, $browserVersion, $options));
+        $this->retryTest(getenv('CI') ? 5 : 2, $this->createClosureTest($browserId, $browserVersion, $options));
     }
 
     protected function createClosureTest($browserId, $browserVersion, $options)
@@ -153,6 +153,9 @@ final class PushServiceTest extends PHPUnit\Framework\TestCase
                     'testSuiteId' => self::$testSuiteId,
                     'testId' => $testId,
                 ]);
+
+                // Sleep for 10 seconds before trying to get notification data
+                sleep(10);
 
                 $getNotificationCurl = curl_init(self::$testServiceUrl.'/api/get-notification-status/');
                 curl_setopt_array($getNotificationCurl, [

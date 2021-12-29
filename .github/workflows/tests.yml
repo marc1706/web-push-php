@@ -65,17 +65,11 @@ jobs:
         run: |
           npm install @marc1706/web-push-testing-service -g
 
-      - name: Start web-push-testing-service
+      - name: Run composer tests
         run: |
           xvfb-run -a --server-args="-screen 0 1280x800x24 -ac -nolisten tcp -dpi 96 +extension RANDR" web-push-testing-service start example -p 9012
-
-      - name: Run composer tests
-        uses: GabrielBB/xvfb-action@v1
-        with:
-          run: composer test:unit
-
-      - name: Stop web-push-testing-service
-        run: |
+          sleep 5
+          xvfb-run -a --server-args="-screen 0 1280x800x24 -ac -nolisten tcp -dpi 96 +extension RANDR" vendor/bin/phpunit
           web-push-testing-service stop example
 
       - name: Run typing & syntax tests
