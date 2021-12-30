@@ -31,8 +31,27 @@ jobs:
           extensions: curl, mbstring, openssl, gmp
           coverage: none
 
+      - name: Remove pre-installed chrome
+        run: |
+          sudo apt remove google-chrome-stable
+
+      - name: Setup Chrome 74
+        uses: browser-actions/setup-chrome@latest
+        with:
+          chrome-version: 637110
+
       - name: Setup chromedriver
-        uses: nanasess/setup-chromedriver@master
+        run: |
+          wget https://chromedriver.storage.googleapis.com/2.46/chromedriver_linux64.zip
+          CHROMEDRIVER_DIR="/usr/local/share/chrome_driver"
+          CHROMEDRIVER_BIN="$CHROMEDRIVER_DIR/chromedriver"
+          sudo unzip -oqq chromedriver_linux64.zip -d $CHROMEDRIVER_DIR
+          sudo chmod +x $CHROMEDRIVER_BIN
+          CHROMIUM_BIN=$(which chrome)
+          sudo rm /usr/bin/chromium
+          sudo rm /usr/bin/chromium-browser
+          sudo ln -s $CHROMIUM_BIN /usr/bin/chromium
+          sudo ln -s $CHROMIUM_BIN /usr/bin/chromium-browser
 
       - run: |
           echo "DISPLAY=:99" >> $GITHUB_ENV
