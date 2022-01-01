@@ -63,14 +63,14 @@ jobs:
 
       - name: Setup web-push-testing-service
         run: |
-          npm install @marc1706/web-push-testing-service -g
+          npm install web-push-testing-service -g
 
       - name: Run composer tests
         run: |
-          xvfb-run -a --server-args="-screen 0 1280x800x24 -ac -nolisten tcp -dpi 96 +extension RANDR" web-push-testing-service start example -p 9012
-          sleep 5
-          xvfb-run -a --server-args="-screen 0 1280x800x24 -ac -nolisten tcp -dpi 96 +extension RANDR" vendor/bin/phpunit
-          web-push-testing-service stop example
+          xvfb-run -a --server-args="-screen 0 1280x800x24 -ac -nolisten tcp -dpi 96 +extension RANDR" nohup java -jar $SELENIUM_JAR_PATH standalone > /dev/null &
+          while ! nc -z localhost 4444 </dev/null; do sleep 1; done # wait for selenium to start
+          export PUSH_BROWSER_STATIC_FILES="$(readlink -f "$(dirname "$(readlink -f "$(which web-push-testing-service)")")/../static")"
+          composer test:unit -v
 
       - name: Run typing & syntax tests
         run: |
