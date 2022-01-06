@@ -68,13 +68,13 @@ jobs:
 
       - name: Setup web-push-testing-service
         run: |
-          npm install @marc1706/web-push-testing-service -g
+          npm install web-push-testing -g
 
       - name: Run tests
         run: |
-          web-push-testing-service start example -p 9012
+          web-push-testing --port 9012 start
           composer test:unit
-          web-push-testing-service stop example
+          web-push-testing --port 9012 stop
           composer test:typing
           composer test:syntax
 
